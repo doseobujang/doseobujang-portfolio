@@ -1,33 +1,674 @@
-import { useState } from 'react'
+import { useEffect, useMemo } from 'react'
+import { BrowserRouter, Link, Route, Routes, useLocation, useParams } from 'react-router-dom'
+import { marked } from 'marked'
+import matter from 'gray-matter'
 import tistoryLogo from './assets/tistory.svg'
 import instagramLogo from './assets/instagram.svg'
 import githubLogo from './assets/github.svg'
 import './App.css'
 
+const postModules = import.meta.glob('/src/content/posts/*.md', { eager: true, as: 'raw' })
+
+function getAllPosts() {
+  return Object.entries(postModules)
+    .map(([path, raw]) => {
+      const slug = path.split('/').pop().replace('.md', '')
+      const { data, content } = matter(raw)
+      return {
+        slug,
+        title: data.title || slug,
+        date: data.date || '',
+        summary: data.summary || '',
+        tags: Array.isArray(data.tags) ? data.tags : [],
+        cover: data.cover || '',
+        content,
+      }
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+}
+
+function useHashScroll() {
+  const location = useLocation()
+
+  useEffect(() => {
+    if (!location.hash) return
+    const target = document.querySelector(location.hash)
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [location])
+}
+
 function App() {
   return (
-    <>
-      <section>
-        <h1>Find Me!</h1>
-        <Sns />
-      </section>
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/culture" element={<CulturePage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:slug" element={<PostPage />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
-function Sns() {
+function HomePage() {
+  useHashScroll()
+
   return (
-    <>
-      <a href="https://doseobujang.tistory.com" target="_blank" title="tistory">
-        <img src= {tistoryLogo} />
-      </a>
-      <a href="https://www.instagram.com/doseobujang" target="_blank" title="instagram">
-        <img src= {instagramLogo} />
-      </a>
-      <a href="https://github.com/doseobujang" target="_blank" title="github">
-        <img src= {githubLogo} />
-      </a>
-    </>
+    <div className="page">
+      <header className="hero" id="top">
+        <nav className="nav">
+          <Link className="brand" to="/">
+            doseobujang
+          </Link>
+          <div className="nav-links">
+            <a href="/#about">About</a>
+            <a href="/#credentials">Credentials</a>
+            <a href="/#projects">Projects</a>
+            <a href="/#sns">SNS</a>
+            <Link to="/blog">Blog</Link>
+            <Link to="/culture">Culture</Link>
+            <a href="/#contact">Contact</a>
+          </div>
+        </nav>
+
+        <div className="hero-grid">
+          <div className="hero-copy">
+            <p className="eyebrow">Portfolio + Personal SNS</p>
+            <h1>기록하고, 실험하고, 연결합니다.</h1>
+            <p className="subtitle">
+              도서부장이라는 이름으로 책, 개발, 일상의 기록을 모아두는 개인
+              아카이브. 프로젝트와 생각을 한곳에 정리했습니다.
+            </p>
+            <div className="hero-actions">
+              <a className="btn primary" href="/#projects">
+                프로젝트 보기
+              </a>
+              <Link className="btn ghost" to="/blog">
+                블로그 보기
+              </Link>
+            </div>
+          </div>
+
+          <div className="hero-card">
+            <div className="hero-card-inner">
+              <p className="card-title">Now</p>
+              <p className="card-text">
+                읽고 쓰고 만드는 과정 전체를 기록하는 중. 작은 실험들을
+                천천히 쌓아갑니다.
+              </p>
+              <div className="pill-row">
+                <span className="pill">Writing</span>
+                <span className="pill">Building</span>
+                <span className="pill">Reading</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section className="section" id="about">
+          <div className="section-header">
+            <h2>About</h2>
+            <p>
+              내가 좋아하는 것들을 하나의 흐름으로 묶어 보여주는 공간입니다.
+              책, 코드, 일상 기록이 서로 이어질 수 있도록 큐레이션하고 있어요.
+            </p>
+          </div>
+          <div className="about-grid">
+            <div className="about-card">
+              <h3>기록 방식</h3>
+              <p>
+                긴 글은 티스토리에, 순간의 감정과 사진은 인스타그램에, 작업물은
+                깃허브에 정리합니다.
+              </p>
+            </div>
+            <div className="about-card">
+              <h3>관심 키워드</h3>
+              <p>
+                독서, 웹 실험, 생산성, 그리고 개인적인 리서치를 중심으로
+                탐구합니다.
+              </p>
+            </div>
+            <div className="about-card">
+              <h3>앞으로</h3>
+              <p>
+                프로젝트 단위로 기록을 남기고, 스스로의 성장을 추적할 수 있는
+                아카이브를 만드는 것이 목표입니다.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="section" id="credentials">
+          <div className="section-header">
+            <h2>Credentials</h2>
+            <p>처음에는 핵심만, 클릭하면 자세한 내용을 볼 수 있습니다.</p>
+          </div>
+          <div className="credential-list">
+            <details className="credential-card">
+              <summary>
+                <span className="credential-title">학력</span>
+                <span className="credential-meta">전공 · 학교명</span>
+              </summary>
+              <div className="credential-body">
+                <p>서울과학기술대학교 / 인공지능응용학과</p>
+                <p className="credential-note">2023 ~ 재학</p>
+              </div>
+            </details>
+            <details className="credential-card">
+              <summary>
+                <span className="credential-title">자격증</span>
+                <span className="credential-meta">자격명 · 세부 자격</span>
+              </summary>
+              <div className="credential-body">
+                <ul className="credential-items">
+                  <li>운전면허 1종보통</li>
+                  <li>컴퓨터활용능력 2급</li>
+                  <li>ITQ OA MASTER: 아래한글, 한글엑셀, 인터넷</li>
+                  <li>워드프로세서</li>
+                  <li>정보처리 기능사, 산업기사(필기)</li>
+                  <li>비서 1급</li>
+                  <li>육상무선통신사</li>
+                  <li>회계관리 1급, 2급</li>
+                  <li>데이터 분석 준전문가(ADsP)</li>
+                  <li>SQL 개발자(SQLD)</li>
+                  <li>SMAT 3급(실무자)</li>
+                  <li>초경량비행장치 조종자 4종(무인멀티콥터)</li>
+                  <li>Microsoft Certified: Azure AI Fundamentals(AI-900), Azure Fundamentals(AZ-900)</li>
+                  <li>전산회계 1급 결과 대기 (제124회, 2026.02.26 발표)</li>
+                </ul>
+              </div>
+            </details>
+            <details className="credential-card">
+              <summary>
+                <span className="credential-title">시험 · 어학</span>
+                <span className="credential-meta">점수 · 유효기간</span>
+              </summary>
+              <div className="credential-body">
+                <ul className="credential-items">
+                  <li>TOEIC 870 (LC 455, RC 415) · 2023.06.25 ~ 2025.06.25</li>
+                  <li>TESAT S급 · 2024.10.26 ~ 2026.10.25</li>
+                  <li>매경TEST 우수 · 2024.12.06 ~ 2026.12.05</li>
+                </ul>
+              </div>
+            </details>
+            <details className="credential-card">
+              <summary>
+                <span className="credential-title">교육 이수</span>
+                <span className="credential-meta">과정명 · 기관</span>
+              </summary>
+              <div className="credential-body">
+                <ul className="credential-items">
+                  <li>K-MOOC 디지털 스토리텔링과 게임 이수</li>
+                  <li>손생님! 한국수어를 부탁해요-입문(한국수어 기초어휘) 수강중</li>
+                  <li>서울과학기술대학교 25-3차 학습법 특강: 협업최강 UXUI 툴 피그마 개념 잡고 실전까지 완전 정복 수강</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section className="section" id="projects">
+          <div className="section-header">
+            <h2>Projects</h2>
+            <p>진행 중인 작업과 최근 실험들을 정리했습니다.</p>
+          </div>
+          <div className="project-grid">
+            <article className="project-card">
+              <h3>Reading Log</h3>
+              <p>
+                읽은 책의 핵심 문장과 생각을 모아두는 기록 프로젝트. 긴 글과
+                짧은 리뷰를 병행합니다.
+              </p>
+              <div className="tags">
+                <span>Archive</span>
+                <span>Content</span>
+              </div>
+            </article>
+            <article className="project-card">
+              <h3>Mini Web Labs</h3>
+              <p>
+                UI 실험과 작은 웹 앱을 테스트하는 공간. 아이디어를 빠르게
+                형태로 옮기는 연습을 합니다.
+              </p>
+              <div className="tags">
+                <span>Frontend</span>
+                <span>Prototype</span>
+              </div>
+            </article>
+            <article className="project-card">
+              <h3>Personal SNS Hub</h3>
+              <p>
+                여러 플랫폼에 흩어진 기록을 한 페이지에서 연결. 검색과 탐색이
+                쉬운 구조를 실험합니다.
+              </p>
+              <div className="tags">
+                <span>Community</span>
+                <span>Design</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="section" id="sns">
+          <div className="section-header">
+            <h2>SNS</h2>
+            <p>이미 연결된 채널로 바로 이동할 수 있습니다.</p>
+          </div>
+          <div className="sns-grid">
+            <a
+              className="sns-card"
+              href="https://doseobujang.tistory.com"
+              target="_blank"
+              title="tistory"
+              rel="noreferrer"
+            >
+              <img src={tistoryLogo} alt="Tistory" />
+              <div>
+                <h3>Tistory</h3>
+                <p>긴 글과 기록</p>
+              </div>
+              <span className="arrow">→</span>
+            </a>
+            <a
+              className="sns-card"
+              href="https://www.instagram.com/doseobujang_official"
+              target="_blank"
+              title="instagram"
+              rel="noreferrer"
+            >
+              <img src={instagramLogo} alt="Instagram" />
+              <div>
+                <h3>Instagram</h3>
+                <p>사진과 순간들</p>
+              </div>
+              <span className="arrow">→</span>
+            </a>
+            <a
+              className="sns-card"
+              href="https://github.com/doseobujang"
+              target="_blank"
+              title="github"
+              rel="noreferrer"
+            >
+              <img src={githubLogo} alt="GitHub" />
+              <div>
+                <h3>GitHub</h3>
+                <p>코드와 작업물</p>
+              </div>
+              <span className="arrow">→</span>
+            </a>
+          </div>
+        </section>
+      </main>
+
+      <footer className="footer" id="contact">
+        <div>
+          <h2>Contact</h2>
+          <p>협업이나 간단한 인사, 언제든 환영합니다.</p>
+        </div>
+        <div className="footer-links">
+          <a href="https://doseobujang.tistory.com" target="_blank" rel="noreferrer">
+            Tistory
+          </a>
+          <a href="https://www.instagram.com/doseobujang_official" target="_blank" rel="noreferrer">
+            Instagram
+          </a>
+          <a href="https://github.com/doseobujang" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+function CulturePage() {
+  useHashScroll()
+
+  return (
+    <div className="page culture-page">
+      <header className="hero culture-hero">
+        <nav className="nav">
+          <Link className="brand" to="/">
+            doseobujang
+          </Link>
+          <div className="nav-links">
+            <Link to="/">Home</Link>
+            <a href="/culture#movies">Movies</a>
+            <a href="/culture#dramas">Drama</a>
+            <a href="/culture#music">Music</a>
+            <a href="/culture#books">Books</a>
+            <a href="/culture#artists">Artists</a>
+          </div>
+        </nav>
+        <div className="hero-grid">
+          <div className="hero-copy">
+            <p className="eyebrow">Culture Archive</p>
+            <h1>내 문화생활 기록</h1>
+            <p className="subtitle">
+              영화, 드라마, 음악, 책, 그리고 좋아하는 아티스트까지. 내 취향을
+              조용히 정리하는 공간입니다.
+            </p>
+            <div className="hero-actions">
+              <a className="btn primary" href="/culture#movies">
+                컬렉션 보기
+              </a>
+              <a className="btn ghost" href="/culture#artists">
+                아티스트 보기
+              </a>
+            </div>
+          </div>
+          <div className="hero-card">
+            <div className="hero-card-inner">
+              <p className="card-title">Focus</p>
+              <p className="card-text">
+                장르별로 분류하고, 짧은 감상으로 기록합니다. 나중에 다시 꺼내보기
+                쉽도록 정리하는 중입니다.
+              </p>
+              <div className="pill-row">
+                <span className="pill">Movies</span>
+                <span className="pill">Music</span>
+                <span className="pill">Books</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section className="section" id="movies">
+          <div className="section-header">
+            <h2>Movies</h2>
+            <p>최근에 인상 깊었던 영화와 다시 보고 싶은 작품.</p>
+          </div>
+          <div className="culture-grid">
+            <article className="media-card">
+              <h3>영화 제목</h3>
+              <p>감상 한 줄 · 감독/장르</p>
+              <span className="media-tag">Rewatch</span>
+            </article>
+            <article className="media-card">
+              <h3>영화 제목</h3>
+              <p>감상 한 줄 · 감독/장르</p>
+              <span className="media-tag">Mood</span>
+            </article>
+          </div>
+        </section>
+
+        <section className="section" id="dramas">
+          <div className="section-header">
+            <h2>Drama</h2>
+            <p>몰입해서 봤던 드라마와 추천작.</p>
+          </div>
+          <div className="culture-grid">
+            <article className="media-card">
+              <h3>드라마 제목</h3>
+              <p>감상 한 줄 · 방송사/장르</p>
+              <span className="media-tag">Favorite</span>
+            </article>
+            <article className="media-card">
+              <h3>드라마 제목</h3>
+              <p>감상 한 줄 · 방송사/장르</p>
+              <span className="media-tag">Ongoing</span>
+            </article>
+          </div>
+        </section>
+
+        <section className="section" id="music">
+          <div className="section-header">
+            <h2>Music</h2>
+            <p>자주 듣는 곡과 그때의 기분.</p>
+          </div>
+          <div className="culture-grid">
+            <article className="media-card">
+              <h3>곡/앨범 제목</h3>
+              <p>아티스트 · 장르 · 한 줄 감상</p>
+              <span className="media-tag">Playlist</span>
+            </article>
+            <article className="media-card">
+              <h3>곡/앨범 제목</h3>
+              <p>아티스트 · 장르 · 한 줄 감상</p>
+              <span className="media-tag">Loop</span>
+            </article>
+          </div>
+        </section>
+
+        <section className="section" id="books">
+          <div className="section-header">
+            <h2>Books</h2>
+            <p>책장에 남겨두고 싶은 문장들.</p>
+          </div>
+          <div className="culture-grid">
+            <article className="media-card">
+              <h3>책 제목</h3>
+              <p>저자 · 키워드 · 한 줄 감상</p>
+              <span className="media-tag">Highlight</span>
+            </article>
+            <article className="media-card">
+              <h3>책 제목</h3>
+              <p>저자 · 키워드 · 한 줄 감상</p>
+              <span className="media-tag">Notebook</span>
+            </article>
+          </div>
+        </section>
+
+        <section className="section" id="artists">
+          <div className="section-header">
+            <h2>Favorite Artists</h2>
+            <p>좋아하는 아티스트를 공개하고, 한 줄 코멘트로 취향을 기록해요.</p>
+          </div>
+          <div className="culture-grid">
+            <article className="media-card">
+              <h3>아티스트 이름</h3>
+              <p>대표 곡/앨범 · 장르</p>
+              <span className="media-tag">Mood</span>
+            </article>
+            <article className="media-card">
+              <h3>아티스트 이름</h3>
+              <p>대표 곡/앨범 · 장르</p>
+              <span className="media-tag">All-time</span>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <div>
+          <h2>Culture Page</h2>
+          <p>기록은 이어집니다. 필요한 만큼만 꺼내 보여주세요.</p>
+        </div>
+        <div className="footer-links">
+          <Link to="/">Home으로 돌아가기</Link>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+function BlogPage() {
+  useHashScroll()
+  const posts = useMemo(() => getAllPosts(), [])
+
+  return (
+    <div className="page blog-page">
+      <header className="hero blog-hero">
+        <nav className="nav">
+          <Link className="brand" to="/">
+            doseobujang
+          </Link>
+          <div className="nav-links">
+            <Link to="/">Home</Link>
+            <Link to="/culture">Culture</Link>
+            <a href="/blog#posts">Posts</a>
+            <a href="/blog#about-blog">About</a>
+          </div>
+        </nav>
+        <div className="hero-grid">
+          <div className="hero-copy">
+            <p className="eyebrow">Blog</p>
+            <h1>도서부장 블로그</h1>
+            <p className="subtitle">
+              읽고, 만들고, 생각한 것들을 천천히 기록합니다. 티스토리에서
+              시작한 글들을 이곳으로 옮기는 중이에요.
+            </p>
+            <div className="hero-actions">
+              <a className="btn primary" href="/blog#posts">
+                글 모아보기
+              </a>
+              <a className="btn ghost" href="/blog#about-blog">
+                블로그 소개
+              </a>
+            </div>
+          </div>
+          <div className="hero-card">
+            <div className="hero-card-inner">
+              <p className="card-title">Writing</p>
+              <p className="card-text">
+                길게 쓰지 않아도 괜찮아요. 지금의 생각을 남기는 게 목적입니다.
+              </p>
+              <div className="pill-row">
+                <span className="pill">Notes</span>
+                <span className="pill">Experiments</span>
+                <span className="pill">Daily</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section className="section" id="posts">
+          <div className="section-header">
+            <h2>Posts</h2>
+            <p>가장 최근에 작성한 글부터 보여줍니다.</p>
+          </div>
+          <div className="post-grid">
+            {posts.map((post) => (
+              <article className="post-card" key={post.slug}>
+                <div>
+                  <p className="post-date">{post.date}</p>
+                  <h3>{post.title}</h3>
+                  <p>{post.summary}</p>
+                </div>
+                <div className="post-footer">
+                  <div className="post-tags">
+                    {post.tags.map((tag) => (
+                      <span key={tag}>{tag}</span>
+                    ))}
+                  </div>
+                  <Link className="post-link" to={`/blog/${post.slug}`}>
+                    읽기 →
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="section" id="about-blog">
+          <div className="section-header">
+            <h2>About</h2>
+            <p>
+              블로그에 올리는 글은 프로젝트 기록, 공부 노트, 문화생활 감상으로
+              구성됩니다. 꾸준히 쌓아가는 것을 목표로 합니다.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <div>
+          <h2>Blog</h2>
+          <p>오늘의 기록은 내일의 힌트가 됩니다.</p>
+        </div>
+        <div className="footer-links">
+          <Link to="/">Home으로 돌아가기</Link>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+function PostPage() {
+  const { slug } = useParams()
+  const posts = useMemo(() => getAllPosts(), [])
+  const post = posts.find((item) => item.slug === slug)
+
+  if (!post) {
+    return (
+      <div className="page blog-page">
+        <header className="hero blog-hero">
+          <nav className="nav">
+            <Link className="brand" to="/">
+              doseobujang
+            </Link>
+            <div className="nav-links">
+              <Link to="/">Home</Link>
+              <Link to="/blog">Blog</Link>
+            </div>
+          </nav>
+          <div className="hero-grid">
+            <div className="hero-copy">
+              <p className="eyebrow">Not Found</p>
+              <h1>글을 찾지 못했어요.</h1>
+              <p className="subtitle">목록으로 돌아가 다른 글을 확인해주세요.</p>
+              <div className="hero-actions">
+                <Link className="btn primary" to="/blog">
+                  블로그로 돌아가기
+                </Link>
+              </div>
+            </div>
+          </div>
+        </header>
+      </div>
+    )
+  }
+
+  const html = marked.parse(post.content)
+
+  return (
+    <div className="page blog-page">
+      <header className="hero blog-hero">
+        <nav className="nav">
+          <Link className="brand" to="/">
+            doseobujang
+          </Link>
+          <div className="nav-links">
+            <Link to="/">Home</Link>
+            <Link to="/blog">Blog</Link>
+            <Link to="/culture">Culture</Link>
+          </div>
+        </nav>
+        <div className="post-hero">
+          <p className="post-date">{post.date}</p>
+          <h1>{post.title}</h1>
+          <p className="subtitle">{post.summary}</p>
+          <div className="post-tags">
+            {post.tags.map((tag) => (
+              <span key={tag}>{tag}</span>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <article className="post-body" dangerouslySetInnerHTML={{ __html: html }} />
+      </main>
+
+      <footer className="footer">
+        <div>
+          <h2>Blog</h2>
+          <p>다음 글에서 다시 만나요.</p>
+        </div>
+        <div className="footer-links">
+          <Link to="/blog">목록으로 돌아가기</Link>
+        </div>
+      </footer>
+    </div>
   )
 }
 
