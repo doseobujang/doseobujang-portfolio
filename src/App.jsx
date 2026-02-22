@@ -1,19 +1,62 @@
 import { useEffect, useMemo } from 'react'
 import { BrowserRouter, Link, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { marked } from 'marked'
-import matter from 'gray-matter'
 import tistoryLogo from './assets/tistory.svg'
 import instagramLogo from './assets/instagram.svg'
 import githubLogo from './assets/github.svg'
 import './App.css'
 
-const postModules = import.meta.glob('/src/content/posts/*.md', { eager: true, as: 'raw' })
+const postModules = import.meta.glob('/src/content/posts/*.md', {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+})
+
+function parseFrontmatter(raw) {
+  if (!raw.startsWith('---')) {
+    return { data: {}, content: raw }
+  }
+
+  const end = raw.indexOf('\n---', 3)
+  if (end === -1) {
+    return { data: {}, content: raw }
+  }
+
+  const frontmatter = raw.slice(3, end).trim()
+  const content = raw.slice(end + 4).replace(/^\n/, '')
+  const data = {}
+
+  frontmatter.split('\n').forEach((line) => {
+    const idx = line.indexOf(':')
+    if (idx === -1) return
+    const key = line.slice(0, idx).trim()
+    const rawValue = line.slice(idx + 1).trim()
+    if (!key) return
+
+    if (key === 'tags') {
+      const cleaned = rawValue.replace(/^\[|\]$/g, '')
+      if (!cleaned) {
+        data.tags = []
+      } else {
+        data.tags = cleaned
+          .split(',')
+          .map((tag) => tag.trim().replace(/^\"|\"$/g, '').replace(/^'|'$/g, ''))
+          .filter(Boolean)
+      }
+      return
+    }
+
+    data[key] = rawValue.replace(/^\"|\"$/g, '').replace(/^'|'$/g, '')
+  })
+
+  return { data, content }
+}
 
 function getAllPosts() {
   return Object.entries(postModules)
     .map(([path, raw]) => {
       const slug = path.split('/').pop().replace('.md', '')
-      const { data, content } = matter(raw)
+      const { data, content } = parseFrontmatter(raw)
       return {
         slug,
         title: data.title || slug,
@@ -32,9 +75,13 @@ function useHashScroll() {
 
   useEffect(() => {
     if (!location.hash) return
-    const target = document.querySelector(location.hash)
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const hash = location.hash.replace('#', '')
+    if (!hash || hash.startsWith('/')) return
+
+    // Use id lookup first to avoid invalid CSS selector crashes.
+    const byId = document.getElementById(hash)
+    if (byId) {
+      byId.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }, [location])
 }
@@ -47,6 +94,7 @@ function App() {
         <Route path="/culture" element={<CulturePage />} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<PostPage />} />
+        <Route path="/poems" element={<PoemPage />} />
       </Routes>
     </BrowserRouter>
   )
@@ -63,30 +111,34 @@ function HomePage() {
             doseobujang
           </Link>
           <div className="nav-links">
-            <a href="/#about">About</a>
-            <a href="/#credentials">Credentials</a>
-            <a href="/#projects">Projects</a>
-            <a href="/#sns">SNS</a>
+            <Link to="/#about">About</Link>
+            <Link to="/#credentials">Credentials</Link>
+            <Link to="/#projects">Projects</Link>
+            <Link to="/#sns">SNS</Link>
             <Link to="/blog">Blog</Link>
             <Link to="/culture">Culture</Link>
-            <a href="/#contact">Contact</a>
+            <Link to="/poems">Poems</Link>
+            <Link to="/#contact">Contact</Link>
           </div>
         </nav>
 
         <div className="hero-grid">
           <div className="hero-copy">
             <p className="eyebrow">Portfolio + Personal SNS</p>
-            <h1>기록하고, 실험하고, 연결합니다.</h1>
+            <h1>미래를 예측하는 최선의 방법은 미래를 창조하는 것이다.</h1>
             <p className="subtitle">
               도서부장이라는 이름으로 책, 개발, 일상의 기록을 모아두는 개인
               아카이브. 프로젝트와 생각을 한곳에 정리했습니다.
             </p>
             <div className="hero-actions">
-              <a className="btn primary" href="/#projects">
+              <Link className="btn primary" to="/#projects">
                 프로젝트 보기
-              </a>
+              </Link>
               <Link className="btn ghost" to="/blog">
                 블로그 보기
+              </Link>
+              <Link className="btn ghost" to="/poems">
+                시 보관함
               </Link>
             </div>
           </div>
@@ -326,6 +378,133 @@ function HomePage() {
   )
 }
 
+function PoemPage() {
+  return (
+    <div className="page poem-page">
+      <header className="hero poem-hero">
+        <nav className="nav">
+          <Link className="brand" to="/">
+            doseobujang
+          </Link>
+          <div className="nav-links">
+            <Link to="/">Home</Link>
+            <Link to="/blog">Blog</Link>
+            <Link to="/culture">Culture</Link>
+            <Link to="/poems#poems">Poems</Link>
+          </div>
+        </nav>
+        <div className="hero-grid">
+          <div className="hero-copy">
+            <p className="eyebrow">Short Poems</p>
+            <h1>짧은 글을 모아두는 페이지</h1>
+            <p className="subtitle">
+              긴 글보다 짧은 문장이 어울리는 날을 위해 준비한 공간입니다. 감정의
+              결을 간단히 남겨두고 필요할 때 다시 꺼내봅니다.
+            </p>
+            <div className="hero-actions">
+              <Link className="btn primary" to="/poems#poems">
+                시 모음 보기
+              </Link>
+              <Link className="btn ghost" to="/poems#notes">
+                짧은 문장
+              </Link>
+            </div>
+          </div>
+          <div className="hero-card">
+            <div className="hero-card-inner">
+              <p className="card-title">Format</p>
+              <p className="card-text">
+                4~8줄 정도의 짧은 시를 저장할 수 있도록 구성했습니다. 부담 없이
+                쓰고 가볍게 남기는 것이 목적입니다.
+              </p>
+              <div className="pill-row">
+                <span className="pill">4-8 Lines</span>
+                <span className="pill">Mood</span>
+                <span className="pill">Minimal</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section className="section" id="poems">
+          <div className="section-header">
+            <h2>Poems</h2>
+            <p>짧은 시를 깔끔하게 모아두는 곳.</p>
+          </div>
+          <div className="poem-grid">
+            <article className="poem-card">
+              <h3>후회</h3>
+              <p className="poem-body">{`너의 안경에 떨어진
+너를 불편하게만 하는
+나는 작은 빗방울
+
+네게 아무리 떨어져보아도
+나는
+작디 작은 방울이었다.
+
+우산을 쓴 너에게
+떨어지고 싶어 나는
+바람을 타고 날았다
+
+떨어진 곳에서 나는
+네게 해가 될까
+다시 바람에 올랐다
+
+나는 지나가는 비였다.
+폭우처럼 쏟아지고 싶지만
+그런 용기조차 없는`}</p>
+              <p className="poem-tag">2022년 장유고등학교 문예창작대회 장려(3위)</p>
+              <p className="poem-meta">2022</p>
+            </article>
+            <article className="poem-card">
+              <h3>제목</h3>
+              <p className="poem-body">{`짧게
+남겨두는
+오늘의 마음
+그게 전부`}</p>
+              <p className="poem-tag">오늘의 감정</p>
+              <p className="poem-meta">2026.02</p>
+            </article>
+            <article className="poem-card">
+              <h3>제목</h3>
+              <p className="poem-body">{`비가 오고
+창문이 흐려져
+말이 줄어든다
+대신 글이 남는다`}</p>
+              <p className="poem-tag">비, 흐림</p>
+              <p className="poem-meta">2026.02</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="section" id="notes">
+          <div className="section-header">
+            <h2>Short Notes</h2>
+            <p>한두 문장으로 남기는 감정 기록.</p>
+          </div>
+          <div className="poem-notes">
+            <p>오늘의 마음을 한 줄로 적는다.</p>
+            <p>짧게 쓰는 글이 생각을 또렷하게 만든다.</p>
+            <p>길게 쓰지 않아도 감정은 충분히 남는다.</p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <div>
+          <h2>Poem Page</h2>
+          <p>짧은 글은 쉽게 잊히지 않는다.</p>
+        </div>
+        <div className="footer-links">
+          <Link to="/">Home으로 돌아가기</Link>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
 function CulturePage() {
   useHashScroll()
 
@@ -338,11 +517,11 @@ function CulturePage() {
           </Link>
           <div className="nav-links">
             <Link to="/">Home</Link>
-            <a href="/culture#movies">Movies</a>
-            <a href="/culture#dramas">Drama</a>
-            <a href="/culture#music">Music</a>
-            <a href="/culture#books">Books</a>
-            <a href="/culture#artists">Artists</a>
+            <Link to="/culture#movies">Movies</Link>
+            <Link to="/culture#dramas">Drama</Link>
+            <Link to="/culture#music">Music</Link>
+            <Link to="/culture#books">Books</Link>
+            <Link to="/culture#artists">Artists</Link>
           </div>
         </nav>
         <div className="hero-grid">
@@ -354,12 +533,12 @@ function CulturePage() {
               조용히 정리하는 공간입니다.
             </p>
             <div className="hero-actions">
-              <a className="btn primary" href="/culture#movies">
+              <Link className="btn primary" to="/culture#movies">
                 컬렉션 보기
-              </a>
-              <a className="btn ghost" href="/culture#artists">
+              </Link>
+              <Link className="btn ghost" to="/culture#artists">
                 아티스트 보기
-              </a>
+              </Link>
             </div>
           </div>
           <div className="hero-card">
@@ -503,8 +682,8 @@ function BlogPage() {
           <div className="nav-links">
             <Link to="/">Home</Link>
             <Link to="/culture">Culture</Link>
-            <a href="/blog#posts">Posts</a>
-            <a href="/blog#about-blog">About</a>
+            <Link to="/blog#posts">Posts</Link>
+            <Link to="/blog#about-blog">About</Link>
           </div>
         </nav>
         <div className="hero-grid">
@@ -516,12 +695,12 @@ function BlogPage() {
               시작한 글들을 이곳으로 옮기는 중이에요.
             </p>
             <div className="hero-actions">
-              <a className="btn primary" href="/blog#posts">
+              <Link className="btn primary" to="/blog#posts">
                 글 모아보기
-              </a>
-              <a className="btn ghost" href="/blog#about-blog">
+              </Link>
+              <Link className="btn ghost" to="/blog#about-blog">
                 블로그 소개
-              </a>
+              </Link>
             </div>
           </div>
           <div className="hero-card">
