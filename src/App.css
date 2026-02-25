@@ -450,7 +450,7 @@
   }
 }
 
-.blog-page .hero {
+.tistory-page .hero {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(245, 235, 225, 0.9));
 }
 
@@ -584,31 +584,21 @@
   gap: 12px;
 }
 
-.post-body {
-  max-width: 760px;
-  margin: 0 auto;
-  background: var(--surface);
-  border-radius: 24px;
-  padding: 32px;
+.tistory-status {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.tistory-error {
+  background: var(--surface-alt);
+  border-radius: 18px;
+  padding: 18px 20px;
   border: 1px solid var(--line);
-  box-shadow: 0 14px 28px rgba(16, 16, 16, 0.1);
+  display: grid;
+  gap: 8px;
 }
 
-.post-body h2,
-.post-body h3 {
-  margin-top: 28px;
-}
-
-.post-body p {
-  color: var(--ink);
-}
-
-.post-body a {
+.tistory-error a {
   color: var(--accent-dark);
-  text-decoration: underline;
-}
-
-.post-body ul {
-  padding-left: 20px;
-  color: var(--ink);
+  font-weight: 600;
 }

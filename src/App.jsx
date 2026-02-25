@@ -1,74 +1,11 @@
-import { useEffect, useMemo } from 'react'
-import { BrowserRouter, Link, Route, Routes, useLocation, useParams } from 'react-router-dom'
-import { marked } from 'marked'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import tistoryLogo from './assets/tistory.svg'
 import instagramLogo from './assets/instagram.svg'
 import githubLogo from './assets/github.svg'
 import './App.css'
 
-const postModules = import.meta.glob('/src/content/posts/*.md', {
-  eager: true,
-  query: '?raw',
-  import: 'default',
-})
-
-function parseFrontmatter(raw) {
-  if (!raw.startsWith('---')) {
-    return { data: {}, content: raw }
-  }
-
-  const end = raw.indexOf('\n---', 3)
-  if (end === -1) {
-    return { data: {}, content: raw }
-  }
-
-  const frontmatter = raw.slice(3, end).trim()
-  const content = raw.slice(end + 4).replace(/^\n/, '')
-  const data = {}
-
-  frontmatter.split('\n').forEach((line) => {
-    const idx = line.indexOf(':')
-    if (idx === -1) return
-    const key = line.slice(0, idx).trim()
-    const rawValue = line.slice(idx + 1).trim()
-    if (!key) return
-
-    if (key === 'tags') {
-      const cleaned = rawValue.replace(/^\[|\]$/g, '')
-      if (!cleaned) {
-        data.tags = []
-      } else {
-        data.tags = cleaned
-          .split(',')
-          .map((tag) => tag.trim().replace(/^\"|\"$/g, '').replace(/^'|'$/g, ''))
-          .filter(Boolean)
-      }
-      return
-    }
-
-    data[key] = rawValue.replace(/^\"|\"$/g, '').replace(/^'|'$/g, '')
-  })
-
-  return { data, content }
-}
-
-function getAllPosts() {
-  return Object.entries(postModules)
-    .map(([path, raw]) => {
-      const slug = path.split('/').pop().replace('.md', '')
-      const { data, content } = parseFrontmatter(raw)
-      return {
-        slug,
-        title: data.title || slug,
-        date: data.date || '',
-        summary: data.summary || '',
-        tags: Array.isArray(data.tags) ? data.tags : [],
-        cover: data.cover || '',
-        content,
-      }
-    })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-}
+const TISTORY_RSS_URL = 'https://doseobujang.tistory.com/rss'
 
 function useHashScroll() {
   const location = useLocation()
@@ -92,8 +29,9 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/culture" element={<CulturePage />} />
-        <Route path="/blog" element={<BlogPage />} />
-        <Route path="/blog/:slug" element={<PostPage />} />
+        <Route path="/tistory" element={<TistoryPage />} />
+        <Route path="/blog" element={<Navigate to="/tistory" replace />} />
+        <Route path="/blog/:slug" element={<Navigate to="/tistory" replace />} />
         <Route path="/poems" element={<PoemPage />} />
       </Routes>
     </BrowserRouter>
@@ -115,7 +53,7 @@ function HomePage() {
             <Link to="/#credentials">Credentials</Link>
             <Link to="/#projects">Projects</Link>
             <Link to="/#sns">SNS</Link>
-            <Link to="/blog">Blog</Link>
+            <Link to="/tistory">Tistory</Link>
             <Link to="/culture">Culture</Link>
             <Link to="/poems">Poems</Link>
             <Link to="/#contact">Contact</Link>
@@ -134,8 +72,8 @@ function HomePage() {
               <Link className="btn primary" to="/#projects">
                 프로젝트 보기
               </Link>
-              <Link className="btn ghost" to="/blog">
-                블로그 보기
+              <Link className="btn ghost" to="/tistory">
+                티스토리 글 보기
               </Link>
               <Link className="btn ghost" to="/poems">
                 시 보관함
@@ -388,7 +326,7 @@ function PoemPage() {
           </Link>
           <div className="nav-links">
             <Link to="/">Home</Link>
-            <Link to="/blog">Blog</Link>
+            <Link to="/tistory">Tistory</Link>
             <Link to="/culture">Culture</Link>
             <Link to="/poems#poems">Poems</Link>
           </div>
@@ -668,13 +606,41 @@ function CulturePage() {
   )
 }
 
-function BlogPage() {
+function TistoryPage() {
   useHashScroll()
-  const posts = useMemo(() => getAllPosts(), [])
+  const [state, setState] = useState({ loading: true, error: '', items: [] })
+
+  useEffect(() => {
+    let active = true
+
+    async function load() {
+      try {
+        const res = await fetch(`/.netlify/functions/tistory?rss=${encodeURIComponent(TISTORY_RSS_URL)}`)
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to load feed')
+        }
+        if (!active) return
+        setState({ loading: false, error: '', items: data.items || [] })
+      } catch (err) {
+        if (!active) return
+        setState({
+          loading: false,
+          error: err?.message || '티스토리 글을 불러오지 못했어요.',
+          items: [],
+        })
+      }
+    }
+
+    load()
+    return () => {
+      active = false
+    }
+  }, [])
 
   return (
-    <div className="page blog-page">
-      <header className="hero blog-hero">
+    <div className="page tistory-page">
+      <header className="hero tistory-hero">
         <nav className="nav">
           <Link className="brand" to="/">
             doseobujang
@@ -682,37 +648,38 @@ function BlogPage() {
           <div className="nav-links">
             <Link to="/">Home</Link>
             <Link to="/culture">Culture</Link>
-            <Link to="/blog#posts">Posts</Link>
-            <Link to="/blog#about-blog">About</Link>
+            <Link to="/poems">Poems</Link>
+            <Link to="/tistory#posts">Posts</Link>
           </div>
         </nav>
         <div className="hero-grid">
           <div className="hero-copy">
-            <p className="eyebrow">Blog</p>
-            <h1>도서부장 블로그</h1>
+            <p className="eyebrow">Tistory</p>
+            <h1>티스토리 기록 모음</h1>
             <p className="subtitle">
-              읽고, 만들고, 생각한 것들을 천천히 기록합니다. 티스토리에서
-              시작한 글들을 이곳으로 옮기는 중이에요.
+              티스토리에 쌓인 글을 이 페이지에서 바로 확인할 수 있습니다. 최신 글부터
+              빠르게 탐색해 보세요.
             </p>
             <div className="hero-actions">
-              <Link className="btn primary" to="/blog#posts">
-                글 모아보기
+              <Link className="btn primary" to="/tistory#posts">
+                글 목록 보기
               </Link>
-              <Link className="btn ghost" to="/blog#about-blog">
-                블로그 소개
-              </Link>
+              <a className="btn ghost" href={TISTORY_RSS_URL} target="_blank" rel="noreferrer">
+                RSS 보기
+              </a>
             </div>
           </div>
           <div className="hero-card">
             <div className="hero-card-inner">
-              <p className="card-title">Writing</p>
+              <p className="card-title">Source</p>
               <p className="card-text">
-                길게 쓰지 않아도 괜찮아요. 지금의 생각을 남기는 게 목적입니다.
+                별도의 블로그 기능 없이도 티스토리 글을 끌어와 보여줍니다. 필요하면
+                이후에 댓글이나 검색 기능을 추가할 수 있어요.
               </p>
               <div className="pill-row">
-                <span className="pill">Notes</span>
-                <span className="pill">Experiments</span>
-                <span className="pill">Daily</span>
+                <span className="pill">RSS</span>
+                <span className="pill">Curated</span>
+                <span className="pill">Fast</span>
               </div>
             </div>
           </div>
@@ -723,128 +690,45 @@ function BlogPage() {
         <section className="section" id="posts">
           <div className="section-header">
             <h2>Posts</h2>
-            <p>가장 최근에 작성한 글부터 보여줍니다.</p>
+            <p>티스토리에서 최근에 작성한 글을 가져옵니다.</p>
           </div>
-          <div className="post-grid">
-            {posts.map((post) => (
-              <article className="post-card" key={post.slug}>
-                <div>
-                  <p className="post-date">{post.date}</p>
-                  <h3>{post.title}</h3>
-                  <p>{post.summary}</p>
-                </div>
-                <div className="post-footer">
-                  <div className="post-tags">
-                    {post.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
+          {state.loading && <p className="tistory-status">불러오는 중...</p>}
+          {state.error && (
+            <div className="tistory-error">
+              <p>{state.error}</p>
+              <a href="https://doseobujang.tistory.com" target="_blank" rel="noreferrer">
+                티스토리에서 확인하기 →
+              </a>
+            </div>
+          )}
+          {!state.loading && !state.error && (
+            <div className="post-grid">
+              {state.items.map((item) => (
+                <article className="post-card" key={item.link}>
+                  <div>
+                    <p className="post-date">{item.pubDate}</p>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
                   </div>
-                  <Link className="post-link" to={`/blog/${post.slug}`}>
-                    읽기 →
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="section" id="about-blog">
-          <div className="section-header">
-            <h2>About</h2>
-            <p>
-              블로그에 올리는 글은 프로젝트 기록, 공부 노트, 문화생활 감상으로
-              구성됩니다. 꾸준히 쌓아가는 것을 목표로 합니다.
-            </p>
-          </div>
+                  <div className="post-footer">
+                    <a className="post-link" href={item.link} target="_blank" rel="noreferrer">
+                      티스토리에서 읽기 →
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
       </main>
 
       <footer className="footer">
         <div>
-          <h2>Blog</h2>
-          <p>오늘의 기록은 내일의 힌트가 됩니다.</p>
+          <h2>Tistory</h2>
+          <p>모든 글은 티스토리에 저장됩니다.</p>
         </div>
         <div className="footer-links">
           <Link to="/">Home으로 돌아가기</Link>
-        </div>
-      </footer>
-    </div>
-  )
-}
-
-function PostPage() {
-  const { slug } = useParams()
-  const posts = useMemo(() => getAllPosts(), [])
-  const post = posts.find((item) => item.slug === slug)
-
-  if (!post) {
-    return (
-      <div className="page blog-page">
-        <header className="hero blog-hero">
-          <nav className="nav">
-            <Link className="brand" to="/">
-              doseobujang
-            </Link>
-            <div className="nav-links">
-              <Link to="/">Home</Link>
-              <Link to="/blog">Blog</Link>
-            </div>
-          </nav>
-          <div className="hero-grid">
-            <div className="hero-copy">
-              <p className="eyebrow">Not Found</p>
-              <h1>글을 찾지 못했어요.</h1>
-              <p className="subtitle">목록으로 돌아가 다른 글을 확인해주세요.</p>
-              <div className="hero-actions">
-                <Link className="btn primary" to="/blog">
-                  블로그로 돌아가기
-                </Link>
-              </div>
-            </div>
-          </div>
-        </header>
-      </div>
-    )
-  }
-
-  const html = marked.parse(post.content)
-
-  return (
-    <div className="page blog-page">
-      <header className="hero blog-hero">
-        <nav className="nav">
-          <Link className="brand" to="/">
-            doseobujang
-          </Link>
-          <div className="nav-links">
-            <Link to="/">Home</Link>
-            <Link to="/blog">Blog</Link>
-            <Link to="/culture">Culture</Link>
-          </div>
-        </nav>
-        <div className="post-hero">
-          <p className="post-date">{post.date}</p>
-          <h1>{post.title}</h1>
-          <p className="subtitle">{post.summary}</p>
-          <div className="post-tags">
-            {post.tags.map((tag) => (
-              <span key={tag}>{tag}</span>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      <main>
-        <article className="post-body" dangerouslySetInnerHTML={{ __html: html }} />
-      </main>
-
-      <footer className="footer">
-        <div>
-          <h2>Blog</h2>
-          <p>다음 글에서 다시 만나요.</p>
-        </div>
-        <div className="footer-links">
-          <Link to="/blog">목록으로 돌아가기</Link>
         </div>
       </footer>
     </div>
