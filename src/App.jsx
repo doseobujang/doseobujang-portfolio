@@ -704,17 +704,15 @@ function TistoryPage() {
           {!state.loading && !state.error && (
             <div className="post-grid">
               {state.items.map((item) => (
-                <article className="post-card" key={item.link}>
-                  <div>
+                <article className="post-row" key={item.link}>
+                  <div className="post-row-main">
                     <p className="post-date">{item.pubDate}</p>
                     <h3>{item.title}</h3>
-                    <p>{item.description}</p>
+                    <p className="post-excerpt">{item.description}</p>
                   </div>
-                  <div className="post-footer">
-                    <a className="post-link" href={item.link} target="_blank" rel="noreferrer">
-                      티스토리에서 읽기 →
-                    </a>
-                  </div>
+                  <a className="post-link" href={item.link} target="_blank" rel="noreferrer">
+                    티스토리에서 읽기 →
+                  </a>
                 </article>
               ))}
             </div>

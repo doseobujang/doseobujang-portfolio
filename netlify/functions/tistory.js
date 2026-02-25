@@ -59,6 +59,9 @@ export async function handler(event) {
         const link = stripCdata(linkRaw)
         const pubDate = stripCdata(pubDateRaw)
         const description = decodeEntities(stripHtml(stripCdata(descriptionRaw)))
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 200)
 
         return { title, link, pubDate, description }
       })
