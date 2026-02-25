@@ -599,3 +599,13 @@
   color: var(--accent-dark);
   font-weight: 600;
 }
+
+.tistory-more {
+  margin-top: 16px;
+  text-align: right;
+}
+
+.tistory-more a {
+  color: var(--accent-dark);
+  font-weight: 600;
+}

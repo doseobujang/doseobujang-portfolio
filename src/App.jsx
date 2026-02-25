@@ -717,6 +717,11 @@ function TistoryPage() {
               ))}
             </div>
           )}
+          <div className="tistory-more">
+            <a href="https://doseobujang.tistory.com" target="_blank" rel="noreferrer">
+              글 더 보기 →
+            </a>
+          </div>
         </section>
       </main>
 

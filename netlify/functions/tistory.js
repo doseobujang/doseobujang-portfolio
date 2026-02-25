@@ -14,7 +14,7 @@ function stripCdata(text) {
 }
 
 function stripHtml(text) {
-  return text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+  return text.replace(/<[^>]*>/g, ' ')
 }
 
 function getTagValue(block, tag) {
@@ -58,7 +58,10 @@ export async function handler(event) {
         const title = decodeEntities(stripCdata(titleRaw))
         const link = stripCdata(linkRaw)
         const pubDate = stripCdata(pubDateRaw)
-        const descriptionText = stripHtml(decodeEntities(stripCdata(descriptionRaw)))
+        const cleaned = stripCdata(descriptionRaw)
+          .replace(/&lt;[^&]*?&gt;/g, ' ')
+        const descriptionText = stripHtml(decodeEntities(cleaned))
+          .replace(/&nbsp;|&#160;/gi, ' ')
           .replace(/\s+/g, ' ')
           .trim()
         const description = descriptionText.length > 200
