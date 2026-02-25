@@ -58,10 +58,12 @@ export async function handler(event) {
         const title = decodeEntities(stripCdata(titleRaw))
         const link = stripCdata(linkRaw)
         const pubDate = stripCdata(pubDateRaw)
-        const description = decodeEntities(stripHtml(stripCdata(descriptionRaw)))
+        const descriptionText = stripHtml(decodeEntities(stripCdata(descriptionRaw)))
           .replace(/\s+/g, ' ')
           .trim()
-          .slice(0, 200)
+        const description = descriptionText.length > 200
+          ? `${descriptionText.slice(0, 200)}…`
+          : descriptionText
 
         return { title, link, pubDate, description }
       })
